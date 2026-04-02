@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceMonitor - 경쟁사 가격 모니터링 대시보드</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">PriceMonitor</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-view="dashboard">
+                <span class="nav-icon">📊</span> Dashboard
+            </a>
+            <a href="#" class="nav-item" data-view="products">
+                <span class="nav-icon">📦</span> Products
+            </a>
+            <a href="#" class="nav-item" data-view="alerts">
+                <span class="nav-icon">🔔</span> Alerts
+                <span class="nav-badge" id="alertBadge">0</span>
+            </a>
+            <a href="#" class="nav-item" data-view="compare">
+                <span class="nav-icon">⚖️</span> Competitor Compare
+            </a>
+            <a href="#" class="nav-item" data-view="categories">
+                <span class="nav-icon">🏷️</span> Categories
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sync-status">
+                <span class="sync-dot"></span> Last sync: <span id="lastSync">just now</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="menu-toggle" id="menuToggle">☰</button>
+            <div class="topbar-search">
+                <input type="text" placeholder="Search products, competitors..." id="globalSearch">
+            </div>
+            <div class="topbar-actions">
+                <button class="btn btn-primary" id="addProductBtn">+ Add Product</button>
+                <button class="btn btn-ghost" id="refreshBtn" title="Refresh data">↻</button>
+            </div>
+        </header>
+
+        <!-- Views -->
+        <div class="content-area">
+            <!-- Dashboard View -->
+            <section class="view active" id="view-dashboard">
+                <h1 class="view-title">Dashboard Overview</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Tracked Products</div>
+                        <div class="stat-value" id="statProducts">0</div>
+                        <div class="stat-sub">across all competitors</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Price Drops Today</div>
+                        <div class="stat-value stat-green" id="statDrops">0</div>
+                        <div class="stat-sub">potential savings found</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Price Increases</div>
+                        <div class="stat-value stat-red" id="statIncreases">0</div>
+                        <div class="stat-sub">in the last 24h</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Active Alerts</div>
+                        <div class="stat-value stat-yellow" id="statAlerts">0</div>
+                        <div class="stat-sub">require attention</div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="card card-large">
+                        <div class="card-header">
+                            <h3>Price Trends (30 Days)</h3>
+                            <select id="dashboardChartProduct" class="select-sm"></select>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="dashboardChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>Recent Alerts</h3></div>
+                        <div class="card-body" id="recentAlerts"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>Top Price Changes</h3></div>
+                        <div class="card-body" id="topChanges"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Products View -->
+            <section class="view" id="view-products">
+                <div class="view-header">
+                    <h1 class="view-title">Tracked Products</h1>
+                    <div class="view-filters">
+                        <select id="filterCategory" class="select-sm">
+                            <option value="all">All Categories</option>
+                        </select>
+                        <select id="filterCompetitor" class="select-sm">
+                            <option value="all">All Competitors</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="productsTable">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Competitor</th>
+                                <th>Current Price</th>
+                                <th>Change (24h)</th>
+                                <th>Target Price</th>
+                                <th>Sparkline</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Alerts View -->
+            <section class="view" id="view-alerts">
+                <h1 class="view-title">Price Alerts</h1>
+                <div class="alerts-list" id="alertsList"></div>
+            </section>
+
+            <!-- Compare View -->
+            <section class="view" id="view-compare">
+                <div class="view-header">
+                    <h1 class="view-title">Competitor Comparison</h1>
+                    <select id="compareProduct" class="select-sm"></select>
+                </div>
+                <div class="compare-container" id="compareContainer"></div>
+                <div class="card" style="margin-top:1.5rem">
+                    <div class="card-header"><h3>Price History Comparison</h3></div>
+                    <div class="card-body">
+                        <canvas id="compareChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Categories View -->
+            <section class="view" id="view-categories">
+                <h1 class="view-title">Categories</h1>
+                <div class="categories-grid" id="categoriesGrid"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Add Product Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Add New Product</h2>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <form id="addProductForm">
+                <div class="form-group">
+                    <label>Product Name</label>
+                    <input type="text" id="formName" required placeholder="e.g. iPhone 15 Pro 256GB">
+                </div>
+                <div class="form-group">
+                    <label>Product URL</label>
+                    <input type="url" id="formUrl" placeholder="https://coupang.com/product/...">
+                </div>
+                <div class="form-group">
+                    <label>Competitor</label>
+                    <input type="text" id="formCompetitor" required placeholder="e.g. Coupang">
+                </div>
+                <div class="form-group">
+                    <label>Current Price (₩)</label>
+                    <input type="number" id="formPrice" required placeholder="1490000">
+                </div>
+                <div class="form-group">
+                    <label>Target Price (₩)</label>
+                    <input type="number" id="formTarget" required placeholder="1400000">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="formCategory" required>
+                        <option value="">Select category</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Fashion">Fashion</option>
+                        <option value="Food">Food</option>
+                        <option value="Cosmetics">Cosmetics</option>
+                        <option value="Home & Living">Home & Living</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Books">Books</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-ghost" id="formCancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Product Detail Modal -->
+    <div class="modal-overlay" id="detailOverlay">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h2 id="detailTitle">Product Detail</h2>
+                <button class="modal-close" id="detailClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-stats" id="detailStats"></div>
+                <div class="card">
+                    <div class="card-header"><h3>Price History</h3></div>
+                    <div class="card-body">
+                        <canvas id="detailChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
